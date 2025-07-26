@@ -3,13 +3,13 @@ import { Form } from 'multiparty';
 import { Readable } from 'stream';
 import { IncomingMessage } from 'http';
 import fs from 'fs/promises';
-import path from 'path';
+import path, { join } from 'path';
 import { parsePDFWithLlama } from '@/lib/llamaparse';
 
 // Use /tmp for serverless environments, fallback to uploads for local dev
-const uploadsDir = process.env.NODE_ENV === 'production' 
+const uploadsDir = join(process.cwd(), process.env.NODE_ENV === 'production' 
   ? '/tmp/uploads'
-  : 'public/uploads';
+  : 'public/uploads');
 
 export const config = {
   api: {
