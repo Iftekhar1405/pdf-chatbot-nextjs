@@ -1,8 +1,12 @@
 import { NextRequest } from 'next/server';
 import { Form } from 'multiparty';
 import { Readable } from 'stream';
-import { parsePDFWithLlama } from '@/lib/llamaparse';
 import { IncomingMessage } from 'http';
+import fs from 'fs/promises';
+import path from 'path';
+import { parsePDFWithLlama } from '@/lib/llamaparse';
+
+const uploadsDir = path.join(process.cwd(), 'public/uploads');
 
 export const config = {
   api: {
@@ -10,11 +14,9 @@ export const config = {
   },
 };
 
-// Convert Buffer into a mock IncomingMessage stream
 function bufferToMockRequestStream(buffer: Buffer, headers: Headers): IncomingMessage {
   const stream = Readable.from(buffer);
   const nodeHeaders: Record<string, string> = Object.fromEntries(headers.entries());
-
   return Object.assign(stream, {
     headers: nodeHeaders,
     method: 'POST',
@@ -26,6 +28,15 @@ function bufferToMockRequestStream(buffer: Buffer, headers: Headers): IncomingMe
 }
 
 export async function POST(req: NextRequest) {
+  try {
+    await fs.mkdir(uploadsDir, { recursive: true });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: 'Failed to create uploads folder' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const contentType = req.headers.get('content-type') || '';
   if (!contentType.includes('multipart/form-data')) {
     return new Response(JSON.stringify({ error: 'Invalid content-type' }), {
@@ -37,14 +48,14 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await req.arrayBuffer());
   const nodeRequest = bufferToMockRequestStream(buffer, req.headers);
 
-  const form = new Form({ uploadDir: './public/uploads' });
+  const form = new Form({ uploadDir: uploadsDir }); // Use dynamic absolute folder
 
   return await new Promise<Response>((resolve) => {
     form.parse(nodeRequest, async (err, fields, files) => {
       if (err) {
         console.error('Form parse error:', err);
         return resolve(
-          new Response(JSON.stringify({ error: 'Form parse failed' }), {
+          new Response(JSON.stringify({ error: 'Form parse failed', details: err.message }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
           })
@@ -63,9 +74,14 @@ export async function POST(req: NextRequest) {
 
       const filePath = file.path;
       const markdown = await parsePDFWithLlama(filePath);
+
       return resolve(
         new Response(
-          JSON.stringify({ message: 'Uploaded and indexed', filePath: filePath.split('/').at(-1), markdown: markdown }),
+          JSON.stringify({
+            message: 'Uploaded and indexed',
+            filePath: path.basename(filePath), // just filename
+            markdown,
+          }),
           { headers: { 'Content-Type': 'application/json' }, status: 200 }
         )
       );
