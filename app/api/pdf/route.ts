@@ -6,7 +6,6 @@ import { join } from 'path';
 export async function GET(req: NextRequest) {
   try {
     const filename = req.nextUrl.searchParams.get('filename');
-    
     if (!filename) {
       return NextResponse.json({ error: 'No filename provided' }, { status: 400 });
     }
