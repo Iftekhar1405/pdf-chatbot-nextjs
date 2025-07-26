@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     }
 
     const uploadsDir = join(process.cwd(), process.env.NODE_ENV === 'production' 
-      ? 'tmp/uploads' : 'public/uploads');
+      ? 'tmp' : 'public/uploads');
     const filePath = join(uploadsDir, filename);
     
     const data = await fs.readFile(filePath);

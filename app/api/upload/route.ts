@@ -8,7 +8,7 @@ import { parsePDFWithLlama } from '@/lib/llamaparse';
 
 // Use /tmp for serverless environments, fallback to uploads for local dev
 const uploadsDir = join(process.cwd(), process.env.NODE_ENV === 'production' 
-  ? '/tmp/uploads'
+  ? 'tmp'
   : 'public/uploads');
 
 export const config = {
