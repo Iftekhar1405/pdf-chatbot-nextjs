@@ -6,7 +6,7 @@ import { join } from 'path';
 export async function GET(req: NextRequest) {
   try {
     const filename = req.nextUrl.searchParams.get('filename');
-    if (!filename) {
+    if (filename === null) {
       return NextResponse.json({ error: 'No filename provided' }, { status: 400 });
     }
 
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     }
 
     const uploadsDir = process.env.NODE_ENV === 'production' || true ? '/tmp' : join(process.cwd(), 'public/uploads');
-    const filePath = join(uploadsDir, filename);
+    const filePath = process.env.NODE_ENV === 'production' || true ? `/tmp/${filename}` : join(uploadsDir, filename);
     
     const data = await fs.readFile(filePath);
     
