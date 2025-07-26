@@ -36,7 +36,7 @@ export default function Home() {
     try {
       const res = await fetch("/api/upload", { method: "POST", body: form });
       const markdownData = await res.json();
-      setPdfId(markdownData.filePath);
+      setPdfId(markdownData.blobUrl);
       const getJobData = async () => {
         const res = await fetch("/api/job", {
           method: "POST",
@@ -146,7 +146,7 @@ export default function Home() {
       </div>
       {pdfId ? (
         <PDFViewer
-          fileUrl={`/api/pdf?filename=${pdfId}`}
+          fileUrl={pdfId} 
           highlights={
             answer?.startIndex !== undefined
               ? [
