@@ -14,8 +14,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
     }
 
-    const uploadsDir = join(process.cwd(), process.env.NODE_ENV === 'production' || true
-      ? 'tmp' : 'public/uploads');
+    const uploadsDir = process.env.NODE_ENV === 'production' || true ? '/tmp' : join(process.cwd(), 'public/uploads');
     const filePath = join(uploadsDir, filename);
     
     const data = await fs.readFile(filePath);
