@@ -7,7 +7,7 @@ import path, { join } from 'path';
 import { parsePDFWithLlama } from '@/lib/llamaparse';
 
 // Use /tmp for serverless environments, fallback to uploads for local dev
-const uploadsDir = join(process.cwd(), process.env.NODE_ENV === 'production' 
+const uploadsDir = join(process.cwd(), process.env.NODE_ENV === 'production'  || true 
   ? 'tmp'
   : 'public/uploads');
 
