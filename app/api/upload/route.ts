@@ -6,7 +6,10 @@ import fs from 'fs/promises';
 import path from 'path';
 import { parsePDFWithLlama } from '@/lib/llamaparse';
 
-const uploadsDir = path.join(process.cwd(), 'public/uploads');
+// Use /tmp for serverless environments, fallback to uploads for local dev
+const uploadsDir = process.env.NODE_ENV === 'production' 
+  ? '/tmp/uploads'
+  : 'public/uploads';
 
 export const config = {
   api: {
@@ -31,6 +34,7 @@ export async function POST(req: NextRequest) {
   try {
     await fs.mkdir(uploadsDir, { recursive: true });
   } catch (err) {
+    console.error('Failed to create uploads folder:', err);
     return new Response(JSON.stringify({ error: 'Failed to create uploads folder' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -48,7 +52,7 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await req.arrayBuffer());
   const nodeRequest = bufferToMockRequestStream(buffer, req.headers);
 
-  const form = new Form({ uploadDir: uploadsDir }); // Use dynamic absolute folder
+  const form = new Form({ uploadDir: uploadsDir });
 
   return await new Promise<Response>((resolve) => {
     form.parse(nodeRequest, async (err, fields, files) => {
@@ -79,7 +83,7 @@ export async function POST(req: NextRequest) {
         new Response(
           JSON.stringify({
             message: 'Uploaded and indexed',
-            filePath: path.basename(filePath), // just filename
+            filePath: path.basename(filePath),
             markdown,
           }),
           { headers: { 'Content-Type': 'application/json' }, status: 200 }
