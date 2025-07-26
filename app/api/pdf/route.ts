@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     if (filename.includes('..') || /[\\/]/.test(filename)) {
       return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
     }
-
+    
     const uploadsDir = join(process.cwd(), process.env.NODE_ENV === 'production' 
       ? 'tmp' : 'public/uploads');
     const filePath = join(uploadsDir, filename);
