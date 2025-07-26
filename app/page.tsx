@@ -1,103 +1,164 @@
-import Image from "next/image";
+"use client";
+import { Chunk } from "@/utils/memory";
+import { useState } from "react";
+import dynamic from "next/dynamic";
+import { GetChatResponse } from "./api/chat/route";
+import { FileSelectDrop } from "./components/FileSelectDrop";
+import { ChatScreen, Message } from "./components/ChatScreen";
+
+const PDFViewer = dynamic(() => import("@/app/components/PDFViewer"), {
+  ssr: false,
+});
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [answer, setAnswer] = useState<{
+    startIndex: number;
+    endIndex: number;
+    answer: string;
+  } | null>(null);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [context, setContext] = useState("");
+  const [pdfId, setPdfId] = useState();
+  const [chat, setChat] = useState<Message[]>([
+    {
+      id: "1",
+      text: "Hello! I'm your AI assistant. How can I help you today?",
+      sender: "bot",
+      timestamp: new Date(),
+    },
+  ]);
+  const [isTyping, setIsTyping] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const upload = async (pdf: File) => {
+    setIsUploadingFile(true);
+    const form = new FormData();
+    if (pdf) form.append("pdf", pdf);
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const markdownData = await res.json();
+      setPdfId(markdownData.filePath);
+      const getJobData = async () => {
+        const res = await fetch("/api/job", {
+          method: "POST",
+          body: JSON.stringify({ jobId: markdownData.markdown.id }),
+        });
+        const responseData = await res.json();
+        setIsUploadingFile(false);
+        setContext(responseData.memory.map((c: Chunk) => c.text).join("\n\n"));
+      };
+      // wait for time to uploaded and parsed
+      // TODO: add a better way to do this
+      window.setTimeout(() => {
+        getJobData();
+      }, 2000);
+    } catch (e) {
+      setIsUploadingFile(false);
+      console.log("error ", e);
+    } finally {
+    }
+  };
+
+  const ask = async (question: string) => {
+    setIsTyping(true);
+    const typingId = Date.now().toString();
+    setChat((pre) => [
+      ...pre,
+      {
+        id: Date.now().toString(),
+        text: question,
+        sender: "user",
+        timestamp: new Date(),
+      },
+      {
+        id: typingId,
+        text: question,
+        sender: "bot",
+        timestamp: new Date(),
+        isTyping: true,
+      },
+    ]);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, context }),
+      });
+      const data = (await res.json()) as GetChatResponse;
+      setChat((pre) => [
+        ...pre.filter((m) => m.id !== typingId),
+        {
+          id: Date.now().toString(),
+          text: data.sources.answer,
+          sender: "bot",
+          timestamp: new Date(),
+        },
+      ]);
+      setAnswer({
+        startIndex: data.sources.start,
+        endIndex: data.sources.end,
+        answer: data.sources.answer,
+      });
+    } catch (e) {
+      setChat((pre) => [...pre.filter((m) => m.id !== typingId)]);
+      console.log("error ", e);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+  console.log("typinng", isTyping);
+
+  return isUploadingFile ? (
+    <div className="h-screen w-screen flex items-center justify-center">
+      <div>
+        <div className="flex justify-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="size-10 animate-spin"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          </svg>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <h1 className="text-2xl font-bold mt-10">Uploading PDF...</h1>
+      </div>
+    </div>
+  ) : !pdfId ? (
+    <div className="h-screen w-screen flex items-center justify-center">
+      <div>
+        <FileSelectDrop
+          acceptedTypes="application/pdf"
+          isLoading={isUploadingFile}
+          onFileSelect={upload}
+        />
+      </div>
+    </div>
+  ) : (
+    <div className="flex justify-between gap-4">
+      <div className="w-2/5 border-r-2 border-gray-200">
+        <ChatScreen isTyping={isTyping} onSendMessage={ask} messages={chat} />
+      </div>
+      {pdfId ? (
+        <PDFViewer
+          fileUrl={`/uploads/${pdfId}`}
+          highlights={
+            answer?.startIndex !== undefined
+              ? [
+                  {
+                    startIndex: answer.startIndex,
+                    endIndex: answer.endIndex,
+                  },
+                ]
+              : []
+          }
+        />
+      ) : null}
     </div>
   );
 }
