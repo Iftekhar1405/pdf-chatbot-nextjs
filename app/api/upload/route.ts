@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         const fileBuffer = await fs.readFile(file.path);
         
         // Upload to Vercel Blob
-        const filename = file.originalFilename || `${Date.now()}.pdf`;
+        const filename = `${Date.now()}.pdf`;
         const blob = await put(filename, fileBuffer, {
           access: 'public', // or 'private' if you need authentication
           contentType: 'application/pdf',
