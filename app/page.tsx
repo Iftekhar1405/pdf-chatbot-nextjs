@@ -146,7 +146,7 @@ export default function Home() {
       </div>
       {pdfId ? (
         <PDFViewer
-          fileUrl={`/uploads/${pdfId}`}
+          fileUrl={`/api/pdf?filename=${pdfId}`}
           highlights={
             answer?.startIndex !== undefined
               ? [

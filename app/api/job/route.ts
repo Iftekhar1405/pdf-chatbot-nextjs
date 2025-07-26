@@ -1,6 +1,6 @@
 import { getEmbedding } from "@/lib/embedding";
 import { getJobDetails } from "@/lib/llamaparse";
-import { addChunk, Chunk } from "@/utils/memory";
+import { Chunk } from "@/utils/memory";
 import { NextRequest } from "next/server";
 
 
