@@ -88,16 +88,16 @@ export default function Home() {
         ...pre.filter((m) => m.id !== typingId),
         {
           id: Date.now().toString(),
-          text: data.sources.answer,
+          text: data.confidence === 0 ? data.suggestion ?? data.answer : data.answer,
           sender: "bot",
           timestamp: new Date(),
         },
       ]);
-      setAnswer({
-        startIndex: data.sources.start,
-        endIndex: data.sources.end,
-        answer: data.sources.answer,
-      });
+      // setAnswer({
+      //   startIndex: data.sources.start,
+      //   endIndex: data.sources.end,
+      //   answer: data.sources.answer,
+      // });
     } catch (e) {
       setChat((pre) => [...pre.filter((m) => m.id !== typingId)]);
       console.log("error ", e);
