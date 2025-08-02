@@ -6,6 +6,7 @@ import { Readable } from 'stream';
 import { IncomingMessage } from 'http';
 import { parsePDFWithLlama } from '@/lib/llamaparse';
 import fs from 'fs/promises';
+import os from 'os'
 
 export const config = {
   api: {
@@ -39,7 +40,9 @@ export async function POST(req: NextRequest) {
   const nodeRequest = bufferToMockRequestStream(buffer, req.headers);
 
   // Use /tmp for temporary processing
-  const form = new Form({ uploadDir: '/tmp' });
+  // const form = new Form({ uploadDir: '/tmp' }); // only works for linux
+
+  const form = new Form({ uploadDir: os.tmpdir() }); // works on both linux and windows
 
   return await new Promise<Response>((resolve) => {
     form.parse(nodeRequest, async (err, fields, files) => {
@@ -66,7 +69,7 @@ export async function POST(req: NextRequest) {
       try {
         // Read the temporary file
         const fileBuffer = await fs.readFile(file.path);
-        
+
         // Upload to Vercel Blob
         const filename = `${Date.now()}.pdf`;
         const blob = await put(filename, fileBuffer, {
@@ -80,7 +83,7 @@ export async function POST(req: NextRequest) {
         const markdown = await parsePDFWithLlama(file.path);
 
         // Clean up temp file
-        await fs.unlink(file.path).catch(() => {});
+        await fs.unlink(file.path).catch(() => { });
 
         return resolve(
           new Response(
@@ -96,10 +99,10 @@ export async function POST(req: NextRequest) {
       } catch (error) {
         console.error('Upload/processing error:', error);
         // Clean up temp file on error
-        await fs.unlink(file.path).catch(() => {});
-        
+        await fs.unlink(file.path).catch(() => { });
+
         return resolve(
-          new Response(JSON.stringify({ 
+          new Response(JSON.stringify({
             error: 'Upload failed',
             details: error instanceof Error ? error.message : 'Unknown error'
           }), {
